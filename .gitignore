@@ -1,0 +1,4 @@
+# Files and folders to be ignored:
+
+data/
+.DS_store
