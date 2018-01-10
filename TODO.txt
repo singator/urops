@@ -1,0 +1,4 @@
+Currently on the agenda:
+
+1. Create and implement an interface to retrieve parking lot data intelligently.
+	a. Need built-in facilitation for cross-validation.
