@@ -10,3 +10,9 @@ PUCPR --> solum,
 UFPR04 --> primis,
 UFPR05 --> secondus
  
+Update (14/01/18)
+_________________
+Major updates have been further made to the data due to inconsistencies with the 
+original data's xml annotation. Please take a look at this newest organization of 
+PKLot to understand the motivations behind the package `retrieval`, to be uploaded
+soon.
