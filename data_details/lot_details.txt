@@ -1,0 +1,5 @@
+	 num_spots, num_snapshots
+solum	 100        4473
+primis	 28         3791
+secondus 40 	    4152
+ 

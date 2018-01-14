@@ -1,0 +1,24 @@
+I used the following scripts to reorganize the original PKLot database:
+
+To find all the files in the cd of a certain kind and delete them:
+(robust against too many arguments)
+find . -name "*#*" -type f -delete
+
+To recursively find and rename all the files in folders with a certain name:
+occupied_dirs=($(find . -type d -name "Occupied"))
+for (( i=0; i<${#occupied_dirs[@]}; i++ ))
+do
+	(cd ${occupied_dirs[i]} && for file in *.jpg 
+		do mv "$file" "${file%.jpg}_o.jpg"
+        done)
+done
+
+
+To recursively find and extract all folders of a certain kind to the top level:
+declare -a arr=("solum" "primis" "secondus")
+for d in "${arr[@]}"
+do
+	find ./"$d" -type f | xargs -I '{}' mv {} ../data/"$d"/
+done
+
+
