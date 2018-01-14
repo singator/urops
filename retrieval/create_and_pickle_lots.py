@@ -1,7 +1,4 @@
-"""This temporary module simply creates a Lot object for each lot in the 
-dataset. It then serializes these objects for future use in other modules.
-Each .pickle file is just 2 MB! 
-"""
+"""Create and serialize a Lot object for each lot in the dataset."""
 
 import pickle
 
