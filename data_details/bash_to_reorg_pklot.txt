@@ -21,4 +21,11 @@ do
 	find ./"$d" -type f | xargs -I '{}' mv {} ../data/"$d"/
 done
 
+To resize all images to 32 by 32 (unfortunately the whole-lot images were also
+a victim of this, I did not check "#" in the name).
+
+for file in *.jpg
+do
+	sips --resampleHeightWidth 32 32 $file
+done;
 

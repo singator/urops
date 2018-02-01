@@ -5,3 +5,5 @@ data/
 ml_algorithms/test.ipynb
 retrieval/__pycache__/
 .ipynb_checkpoints/
+.gitignore
+.floydignore
