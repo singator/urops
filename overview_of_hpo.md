@@ -1,4 +1,4 @@
-# Index to Hyperparamter Optimization Course.
+# Overview of Hyperparamter Optimization Course.
 
 ## Week 1
 
