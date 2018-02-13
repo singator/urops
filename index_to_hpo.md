@@ -48,12 +48,12 @@
 - Why they make gradient descent slow.
 - Activation function-dependent solutions to this.
 
-## Week 2
-
 ### C2W1L12+
 - Gradient checking. *Seems unnecessary if we are to use tensorflow, which
   implements backpropagation automatically when an optimization function is
   specified.*
+  
+## Week 2
 
 ### C2W2L01
 - Need for fast optimization algorithms.
