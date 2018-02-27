@@ -1,0 +1,138 @@
+---
+geometry: margin=0.6cm
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = getwd()) # wd intended to be "."
+```
+
+# Reducing the Pain of Parking using Machine Learning.
+
+## Intent
+The search for parking spots adds to the tedium of commuting; current means
+of expediting search, such as occupancy level billboards outside parking lots,
+do not offer sufficiently specific information for the purpose of finding a spot
+quickly. We desire to enhance the specificity of occupancy information available
+to users through a machine learning-driven application[^1]. Namely, we aspire to
+establish the following workflow:
+\newline
+\begin{center}
+User requests for spot-wise occupancy status through the application, \\
+$\downarrow$ \\
+picture of lot taken by a standard CCTV or dedicated camera, \\
+and transmitted to associated {\it cloud-based deep-learning model}, \\
+$\downarrow$ \\
+spots in picture classified as empty or occupied by model, \\
+$\downarrow$ \\
+picture deleted, and user sent spatially-accurate abstraction of spot-wise
+occupancy.
+\end{center}
+
+[^1]: In this document, an individual parking space is referred to as a
+parking *spot*, and spots constitute a parking *lot*.
+
+## Choice of Machine Learning Tool
+The deep-learning model aforementioned refers to a convolutional neural network
+(CNN). CNNs are a class of artificial neural networks, which are statistical
+models that are designed to fit complex nonlinear hypotheses to data and improve
+them iteratively. CNNs in particular are currently state-of-the-art in computer
+vision-related tasks; our task is one of binary image classification.
+
+Before a CNN is ready for use in ascertaining the occupancy of a parking lot
+from its picture, it must be trained to do so. This training process requires a
+large number of *training examples* -- namely, different pictures of the
+parkling lot which each have their spot-wise occupancy manually labelled. During
+the training process, the CNN will learn what aspects of the picture of a spot
+imply it is occupied or empty through relating the images to their labels. This
+training process can take several hours or days, depending on the number of
+training examples at hand.
+
+After training, the CNN will be able to create predictions with an estimable
+level of accuracy. Per-image prediction is almost instantaneous.
+
+## Partial Proof of Concept
+A large dataset concerning two parking lots, PKLot, [is publicly
+available](https://web.inf.ufpr.br/vri/databases/parking-lot-database/). The
+lots are pictured below[^2]. The dataset contains about 700,000 images of spots
+between the two lots, taken over a month. It is robust in the sense that it
+contains images from a wide range of light and weather conditions.
+
+```{r, echo=FALSE, fig.align='center'}
+library(png)
+img <- readPNG("pklot.png")
+grid::grid.raster(img)
+```
+
+We created a CNN for each of these parking lots, and achieved prediction
+accuracies of 99+%, which translated to the misclassification of about 300 spots
+in requesting for the prediction of the state of about 175,000. It is therefore
+without question that CNNs are apt tools for this task. It will be fruitful to
+understand how this success can be replicated in the local context, where we
+have control over collection of data.
+
+[^2]: Almeida, P., Oliveira, L. S., Silva Jr, E., Britto Jr, A., Koerich, A.,
+(2015). PKLot's two parking lots. [image] Available at:
+https://web.inf.ufpr.br/vri/databases/parking-lot-database/ [Accessed 26 Feb.
+2018].
+
+## Data Collection: Obtaining Images of the Parking Lot
+We intend to use an Arduino Y??n (an inexpensive microcontroller board with WiFi
+support), connected to a 720p USB webcam and a 64 GB microSD card to capture
+pictures of our selected lot: we will perch the device at a vantage point
+overlooking the parking lot adjacent to Block S17. The following is an image
+from this point, taken at 720p.
+
+```{r, echo=FALSE, fig.align='center', fig.height=2.5, fig.width=2.5}
+library(png)
+img <- readPNG("s17_toreplace.png") # TODO: Replace.
+grid::grid.raster(img)
+```
+
+Images will be taken by the device at five minute intervals for most of the
+working day, for four weeks. They will be [wirelessly transmitted to a private
+DropBox
+account](https://learn.adafruit.com/wireless-security-camera-arduino-yun/introduction),
+and will also be encrypted and stored in the attached microSD card for backup
+purposes.
+
+When the observational period is over, all images will be downloaded and then
+deleted from the microSD card and DropBox account. Before further use, they will
+be processed:
+
+*(An aside)* privacy concerns regarding identifiable features of licence plates
+and persons. Given the resolution of the camera, and the distance of the vantage
+from the lot, little has to be done to obscure such features. Therefore it will
+be sufficient to apply a light blur to images before use:
+
+```{r, echo=FALSE, fig.align='center'}
+library(png)
+img <- readPNG("before_and_after_blur_small.png") # TODO: Replace.
+grid::grid.raster(img)
+```
+
+## Training the CNN, on the Cloud.
+Training and configuration of CNNs will be done online on [Floydhub](https://www.floydhub.com),
+which means that we will ultimately be storing all collected image data on a
+private repository on the cloud. There are a number of reasons for these
+choices:
+\begin{enumerate}
+  \item Great computing power is available on the cloud inexpensively; it will
+  save us many hours in training.
+  \item Training multiple configurations of the same CNN altogther is possible
+  -- on a personal computer, it is not. Again, time will be saved.
+  \item Working on the cloud allows all involved in the project to collaborate
+  seamlessly.
+  \item Moving development to the cloud will better prepare us for what is
+  below.
+\end{enumerate}
+
+## Responding to User Requests, on the Cloud.
+Tools like [Amazon's Amazon Web
+Services](https://aws.amazon.com/blogs/machine-learning/how-to-deploy-deep-learning-models-with-aws-lambda-and-tensorflow/)
+(AWS) allow us to put a CNN on the cloud for prediction purposes. They offer
+serverless services that can scale naturally in capacity in response to demand,
+and are only billed per user request. Our application intends to harness this
+tool.
+
+***Conclusion?***
