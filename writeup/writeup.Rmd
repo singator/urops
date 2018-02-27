@@ -1,6 +1,7 @@
 ---
 geometry: margin=0.6cm
 output: pdf_document
+urlcolor: blue
 ---
 
 ```{r setup, include=FALSE}
@@ -17,6 +18,7 @@ quickly. We desire to enhance the specificity of occupancy information available
 to users through a machine learning-driven application[^1]. Namely, we aspire to
 establish the following workflow:
 \newline
+
 \begin{center}
 User requests for spot-wise occupancy status through the application, \\
 $\downarrow$ \\
@@ -36,8 +38,9 @@ parking *spot*, and spots constitute a parking *lot*.
 The deep-learning model aforementioned refers to a convolutional neural network
 (CNN). CNNs are a class of artificial neural networks, which are statistical
 models that are designed to fit complex nonlinear hypotheses to data and improve
-them iteratively. CNNs in particular are currently state-of-the-art in computer
-vision-related tasks; our task is one of binary image classification.
+them iteratively and automatically. CNNs in particular are currently
+state-of-the-art in computer vision-related tasks; our task is one of binary
+image classification.
 
 Before a CNN is ready for use in ascertaining the occupancy of a parking lot
 from its picture, it must be trained to do so. This training process requires a
@@ -77,15 +80,27 @@ https://web.inf.ufpr.br/vri/databases/parking-lot-database/ [Accessed 26 Feb.
 2018].
 
 ## Data Collection: Obtaining Images of the Parking Lot
-We intend to use an Arduino Y??n (an inexpensive microcontroller board with WiFi
+We intend to use an Arduino Yun (an inexpensive microcontroller board with WiFi
 support), connected to a 720p USB webcam and a 64 GB microSD card to capture
 pictures of our selected lot: we will perch the device at a vantage point
 overlooking the parking lot adjacent to Block S17. The following is an image
 from this point, taken at 720p.
+\vspace{4mm}
+```{r, echo=FALSE, fig.align='center', fig.height=4, fig.width=4}
+library(jpeg)
+img <- readJPEG("view_720p.jpg")
+grid::grid.raster(img)
+```
+\newpage
 
-```{r, echo=FALSE, fig.align='center', fig.height=2.5, fig.width=2.5}
-library(png)
-img <- readPNG("s17_toreplace.png") # TODO: Replace.
+Some context of the vantage's location:
+
+```{r, echo=FALSE, fig.align='center', fig.height=3, fig.width=3}
+library(jpeg)
+img <- readJPEG("context_used.jpg")
+grid::grid.raster(img)
+plot.new()
+img <- readJPEG("context2_used.jpg")
 grid::grid.raster(img)
 ```
 
@@ -101,28 +116,30 @@ deleted from the microSD card and DropBox account. Before further use, they will
 be processed:
 
 *(An aside)* privacy concerns regarding identifiable features of licence plates
-and persons. Given the resolution of the camera, and the distance of the vantage
-from the lot, little has to be done to obscure such features. Therefore it will
-be sufficient to apply a light blur to images before use:
+and persons. Given the resolution of the camera, and the distance and angle of
+the vantage from the lot, little has to be done to obscure such features.
+Therefore it will be sufficient to apply a light blur to images before storage:
+\vspace{4mm}
 
-```{r, echo=FALSE, fig.align='center'}
-library(png)
-img <- readPNG("before_and_after_blur_small.png") # TODO: Replace.
+```{r, echo=FALSE, fig.align='center', fig.height=4, fig.width=4}
+library(jpeg)
+img <- readJPEG("view_720p_blurred.jpg")
 grid::grid.raster(img)
 ```
 
 ## Training the CNN, on the Cloud.
-Training and configuration of CNNs will be done online on [Floydhub](https://www.floydhub.com),
-which means that we will ultimately be storing all collected image data on a
-private repository on the cloud. There are a number of reasons for these
-choices:
+Training and configuration of CNNs will be done online on
+[Floydhub](https://www.floydhub.com), which means that we will ultimately be
+storing all collected image data on a private repository on the cloud. These
+images will stay there until this project culminates, likely in August 2018.
+There are a number of reasons for these choices:
 \begin{enumerate}
   \item Great computing power is available on the cloud inexpensively; it will
   save us many hours in training.
-  \item Training multiple configurations of the same CNN altogther is possible
-  -- on a personal computer, it is not. Again, time will be saved.
+  \item Training multiple configurations of the same CNN concurrently is
+  possible -- on a personal computer, it is not. Again, time will be saved.
   \item Working on the cloud allows all involved in the project to collaborate
-  seamlessly.
+  seamlessly, and is the norm in industry.
   \item Moving development to the cloud will better prepare us for what is
   below.
 \end{enumerate}
@@ -131,8 +148,17 @@ choices:
 Tools like [Amazon's Amazon Web
 Services](https://aws.amazon.com/blogs/machine-learning/how-to-deploy-deep-learning-models-with-aws-lambda-and-tensorflow/)
 (AWS) allow us to put a CNN on the cloud for prediction purposes. They offer
-serverless services that can scale naturally in capacity in response to demand,
-and are only billed per user request. Our application intends to harness this
-tool.
+serverless services that can scale dynamically in capacity in response to
+demand, and are only billed per user request. Our application intends to harness
+this tool in its back-end.
 
-***Conclusion?***
+## Conclusion
+Increasing the resolution of information available to those seeking a parking
+spot is not the only implication of this project, especially given that NUS'
+parking lots are organized appropriately for demand. Rather, we see this project
+as a capability-building exercise; a segue into greater problems that can be
+addressed by machine learning -- either by us or those who take reference to our
+experiences in the future.
+\newline
+{\it How would you like me to name-drop OSHE's bus request here? Will need you
+to talk about them earlier first.}

@@ -12,6 +12,10 @@ Intended working directory: "."
 
 from __future__ import division, print_function, absolute_import
 
+import os
+
+os.chdir("/Users/nurmister/Documents/academic/urops/")
+
 import tensorflow as tf
 
 from retrieval import data_manager
@@ -89,6 +93,7 @@ def model_fn(features, labels, mode):
     # Define loss and optimizer.
     loss_op = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
         logits=logits_train, labels=tf.cast(labels, dtype=tf.int32)))
+
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
     train_op = optimizer.minimize(loss_op,
                                   global_step=tf.train.get_global_step())
@@ -109,7 +114,7 @@ def model_fn(features, labels, mode):
 
 
 # Build the estimator.
-model = tf.estimator.Estimator(model_fn)
+model = tf.estimator.Estimator(model_fn, model_dir="ml_algorithms/logs/1")
 
 # Define the input function for training.
 input_fn = tf.estimator.inputs.numpy_input_fn(
