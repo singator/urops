@@ -1,7 +1,9 @@
 # urops
 Repository for the AY 17/18 S2 UROPS on detecting the occupancy of a parking lot using ML techniques.
 
-## In the next few weeks, expect...
-One word: [hyperparameteroptimization](https://www.coursera.org/learn/deep-neural-network).
-
-Also: (to consider) putting everything on Floydhub.
+## Commitments for recess week
+- Implementing network on lower-level API.
+- Integrating Tensorboard.
+- Putting everything on Floydhub.
+- Drafting and submitting the pitch.
+- Reading paper "On the Cost of Data Analysis."
