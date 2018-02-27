@@ -68,7 +68,7 @@ def create_data(lot_name, subset_size, testing_pct):
     base_path = "data/pickles/" + lot_name
     features = pickle_load(base_path + "_X.npy")
     labels = pickle_load(base_path + "_y.npy")
-    
+
     # Even if we desire to use all the data concerning the lot, we must shuffle
     # the sets.
     if subset_size == -1:
@@ -81,3 +81,9 @@ def create_data(lot_name, subset_size, testing_pct):
     labels = labels[selected_indices]
 
     return train_test_split(features, labels, test_size=testing_pct)
+
+
+def find_num_steps(name, subset, batch_size, testing_pct):
+    arr = pickle_load("data/pickles/" + name + "_y.npy")
+    num_ex = (1 - testing_pct) * arr.shape[0]
+    return int(num_ex / batch_size) + 1

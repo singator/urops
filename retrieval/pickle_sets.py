@@ -10,7 +10,11 @@ import glob
 import cv2
 import numpy as np
 
-from data_manager import MacOSFile as mof
+# os.chdir("/Users/nurmister/Documents/academic/urops/retrieval/")
+
+import data_manager
+
+# os.chdir("/Users/nurmister/Documents/academic/urops/data/")
 
 names = ["solum", "primis", "secondus"]
 num_spots = [100, 28, 40]
@@ -20,8 +24,8 @@ for lot_index in range(3):
     os.chdir(dirs[lot_index])
     all_instances = [file for file in glob.glob("*#*")]
     num_instances = len(all_instances)
-    y = np.empty(shape=(num_instances, 1), dtype="uint8")
-    X = np.empty(shape=(num_instances, 32, 32, 3))
+    y = np.empty(shape=(num_instances, 1), dtype="int32")
+    X = np.empty(shape=(num_instances, 32, 32, 3), dtype="float32")
 
     for file_index in range(num_instances):
         fname = all_instances[file_index]
@@ -30,12 +34,9 @@ for lot_index in range(3):
             y[file_index] = 0
         else:
             y[file_index] = 1
-    # I wonder if there is a better way to flatten y, earlier.
-    # Since this is a one-time operation, I did not bother to find out.
-    y = y[:, 0]
 
     base_path = "../pickles/" + names[lot_index]
     path_X = base_path + "_X.npy"
     path_y = base_path + "_y.npy"
-    mof.pickle_dump(X, path_X)
-    mof.pickle_dump(y, path_y)
+    data_manager.pickle_dump(X, path_X)
+    data_manager.pickle_dump(y, path_y)

@@ -14,11 +14,9 @@ from __future__ import division, print_function, absolute_import
 
 import os
 
-os.chdir("/Users/nurmister/Documents/academic/urops/")
-
 import tensorflow as tf
 
-from retrieval import data_manager
+import retrieval.data_manager as data_manager
 
 # Data Parameters
 lot_name = "primis"

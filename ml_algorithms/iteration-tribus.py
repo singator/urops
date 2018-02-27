@@ -1,13 +1,16 @@
 """iteration-tribus: a third attempt at CNN, built on the layers API.
 
-Inspired by
+Inspired by (only inspired -- the tutorial, directly applied to our problem, 
+produced horrible results):
     https://www.tensorflow.org/tutorials/layers
 Has the same architecture as iteration-duo.
 
-Current best evaluation accuracies:
-    primis: 99.7%
-    secondus:
-    solum:
+Current best evaluation accuracies (4 s.f.):
+    primis: 99.78%
+    secondus: 99.52%
+    solum: 99.87%
+All of the above are better than iteration-duo.
+The splits that resulted in the above are on Floydhub and Google Drive.
 
 Intended working directory: "."
 """
@@ -26,11 +29,10 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 tf.logging.set_verbosity(tf.logging.INFO)
-os.chdir("/Users/nurmister/Documents/academic/urops")
 
-# The following hyperparameters are global variables because cnn_model_fn()
+# The following hyperparameters are global variables because `cnn_model_fn()`
 # cannot accept any arguments except those currently listed, in order to
-# conform with the Estimator API.
+# conform with the `Estimator` API.
 # Both of the below are set when the function is called from the command line--
 # i.e. they are flags.
 global dropout_rate, learning_rate
@@ -84,18 +86,13 @@ def pickle_load(file_path):
         return pickle.load(MacOSFile(f))
 
 
-def create_data(lot_name, subset_size, testing_pct):
-    base_path = "data/pickles/" + lot_name
+def create_data(lot_name, testing_pct):
+    base_path = "data/pickles_2/" + lot_name
     features = pickle_load(base_path + "_X.npy")
     labels = pickle_load(base_path + "_y.npy")
 
-    # Even if we desire to use all the data concerning the lot, we must shuffle
-    # the sets.
-    if subset_size == -1:
-        subset_size = features.shape[0]
-
     selected_indices = np.random.choice(features.shape[0],
-                                        subset_size,
+                                        features.shape[0],
                                         replace=False)
     features = features[selected_indices]
     labels = labels[selected_indices]
@@ -103,11 +100,10 @@ def create_data(lot_name, subset_size, testing_pct):
     return train_test_split(features, labels, test_size=testing_pct)
 
 
-def find_num_steps(name, subset, batch_size, testing_pct):
-    """
-    
-    """
-    arr = pickle_load("data/pickles/" + name + "_y.npy")
+def find_num_steps(name, batch_size, testing_pct):
+    """Depending on the batch_size, returns the minimum number of steps
+    required to train the model on each training example once."""
+    arr = pickle_load("data/pickles_2/" + name + "_y.npy")
     num_ex = (1 - testing_pct) * arr.shape[0]
     return int(num_ex / batch_size) + 1
 
@@ -130,29 +126,36 @@ def cnn_model_fn(features, labels, mode):
 
     global dropout_rate, learning_rate
 
-    # labels = tf.cast(labels, tf.int32)
-
-    # Convolutional Layer #1 and Pooling Layer #1
+    # First convolutional+pooling layer.
     conv1 = tf.layers.conv2d(
-        inputs=features["x"],  # tf.cast(features["x"], tf.float32),
+        inputs=features["x"],
         filters=32,
         kernel_size=5,
         padding="same",
         activation=tf.nn.relu)
-    pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=2, strides=2)
+    pool1 = tf.layers.max_pooling2d(
+            inputs=conv1,
+            pool_size=2,
+            strides=2)
 
+    # Second sconvolutional+pooling layer.
     conv2 = tf.layers.conv2d(
         inputs=pool1,
         filters=64,
-        kernel_size=3,
+        kernel_size=3,  # Works better than 5.
         padding="same",
         activation=tf.nn.relu)
-    pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
+    pool2 = tf.layers.max_pooling2d(
+            inputs=conv2,
+            pool_size=[2, 2],
+            strides=2)
 
-    # Dense Layer
+    # Dense layer -- dropout enabled if mode == "TRAIN".
     pool2_flat = tf.reshape(pool2, [-1, 8 * 8 * 64])
-    dense = tf.layers.dense(inputs=pool2_flat, units=1024,
-                            activation=tf.nn.relu)
+    dense = tf.layers.dense(
+            inputs=pool2_flat,
+            units=1024,
+            activation=tf.nn.relu)
     dropout = tf.layers.dropout(
             inputs=dense,
             rate=dropout_rate,
@@ -162,7 +165,6 @@ def cnn_model_fn(features, labels, mode):
     logits = tf.layers.dense(inputs=dropout, units=2)
 
     predictions = {
-        # Generate predictions (for PREDICT and EVAL mode)
         "classes": tf.argmax(input=logits, axis=1),
         # Add `softmax_tensor` to the graph. It is used for PREDICT and by the
         # `logging_hook`.
@@ -172,8 +174,10 @@ def cnn_model_fn(features, labels, mode):
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
-    # Calculate Loss (for both TRAIN and EVAL modes)
-    loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+    # Calculate loss (for both TRAIN and EVAL modes).
+    loss = tf.losses.sparse_softmax_cross_entropy(
+            labels=labels,
+            logits=logits)
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -182,37 +186,53 @@ def cnn_model_fn(features, labels, mode):
         train_op = optimizer.minimize(
                 loss=loss,
                 global_step=tf.train.get_global_step())
-        return tf.estimator.EstimatorSpec(mode=mode, loss=loss,
-                                          train_op=train_op)
+        return tf.estimator.EstimatorSpec(
+                mode=mode,
+                loss=loss,
+                train_op=train_op)
 
     # Add evaluation metrics (for EVAL mode)
     eval_metric_ops = {
             "accuracy": tf.metrics.accuracy(
-                    labels=labels, predictions=predictions["classes"])}
+                    labels=labels,
+                    predictions=predictions["classes"])}
     return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=loss,
             eval_metric_ops=eval_metric_ops)
 
 
-def main(lot_name, subset_size, testing_pct, batch_size, num_steps):
-    """Need a docstring here."""
+def main(lot_name, testing_pct, batch_size, num_steps):
+    """Load train and test sets, create Estimator, set up logging hooks, and
+    train and evaluate the Estimator.
+
+    Arguments:
+        lot_name: {"primis", "secondus", "solum"}.
+        testing_pct: (0, 1).
+        batch_size: Preferably powers of 2.
+        num_steps: Depending on the batch_size, is set to the minimum number of
+        steps required to train the model on each training example once.
+    Returns:
+        Prints and saves logs, and saves model checkpoints.
+    """
+
     train_X, test_X, train_y, test_y = create_data(
             lot_name,
-            subset_size,
             testing_pct)
+
     # Create the Estimator
     classifier = tf.estimator.Estimator(
-            model_fn=cnn_model_fn, model_dir="ml_algorithms/logs/"
-            + time.strftime("%d%m%Y")  + "_" + time.strftime("%H%M%S"))
+            model_fn=cnn_model_fn,
+            model_dir="ml_algorithms/logs/" + lot_name + "_" +
+            time.strftime("%d-%m") + "_" + time.strftime("%H-%M"))
 
-    # Set up logging for predictions
-    # Log the values in the "Softmax" tensor with label "probabilities"
+    # Set up logging for predictions.
+    # Log the values in the "Softmax" tensor with label "probabilities".
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
             tensors=tensors_to_log, every_n_iter=50)
 
-    # Train the model
+    # Train the model.
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
             x={"x": train_X},
             y=train_y,
@@ -224,7 +244,7 @@ def main(lot_name, subset_size, testing_pct, batch_size, num_steps):
             steps=num_steps,
             hooks=[logging_hook])
 
-    # Evaluate the model and print results
+    # Evaluate the model and print results.
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
             x={"x": test_X},
             y=test_y,
@@ -239,7 +259,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", type=str)
-    parser.add_argument("--subset", type=int, default=-1)
     parser.add_argument("--batchsize", type=int)
     parser.add_argument("--testingpct", type=float)
     parser.add_argument("--dropout", type=float)
@@ -251,11 +270,9 @@ if __name__ == "__main__":
 
     main(
             args.name,
-            args.subset,
             args.testingpct,
             args.batchsize,
             find_num_steps(
                     args.name,
-                    args.subset,
                     args.batchsize,
                     args.testingpct))
