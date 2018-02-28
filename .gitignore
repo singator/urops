@@ -8,3 +8,4 @@ retrieval/__pycache__/
 .RDataTmp
 .Rhistory
 .gitignore.swp
+.floydexpt
