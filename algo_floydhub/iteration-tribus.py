@@ -11,8 +11,6 @@ Current best evaluation accuracies (4 s.f.):
     solum: 99.87%
 All of the above are better than iteration-duo.
 The splits that resulted in the above are on Floydhub and Google Drive.
-
-Intended working directory: "./ml_algorithms"
 """
 
 from __future__ import absolute_import
@@ -37,11 +35,52 @@ tf.logging.set_verbosity(tf.logging.INFO)
 global dropout_rate, learning_rate
 
 
-def find_num_steps(name, batch_size, testing_pct):
+class MacOSFile():
+
+    def __init__(self, f):
+        self.f = f
+
+    def __getattr__(self, item):
+        return getattr(self.f, item)
+
+    def read(self, n):
+        # print("reading total_bytes=%s" % n, flush=True)
+        if n >= (1 << 31):
+            buffer = bytearray(n)
+            idx = 0
+            while idx < n:
+                batch_size = min(n - idx, 1 << 31 - 1)
+                # print("reading bytes [%s,%s)..." % (idx, idx + batch_size),
+                # \ end="", flush=True)
+                buffer[idx:idx + batch_size] = self.f.read(batch_size)
+                # print("done.", flush=True)
+                idx += batch_size
+            return buffer
+        return self.f.read(n)
+
+    def write(self, buffer):
+        n = len(buffer)
+        print("writing total_bytes=%s..." % n, flush=True)
+        idx = 0
+        while idx < n:
+            batch_size = min(n - idx, 1 << 31 - 1)
+            print("writing bytes [%s, %s)... " % (idx, idx + batch_size),
+                  end="", flush=True)
+            self.f.write(buffer[idx:idx + batch_size])
+            print("done.", flush=True)
+            idx += batch_size
+
+
+def pickle_load(file_path):
+    """Wrapper of pickle.load"""
+    with open(file_path, "rb") as f:
+        return pickle.load(MacOSFile(f))
+
+
+def find_num_steps(train_y, batch_size, testing_pct):
     """Depending on the batch_size, returns the minimum number of steps
     required to train the model on each training example once."""
-    arr = pickle_load("data/pickles_2/" + name + "_y.npy")
-    num_ex = (1 - testing_pct) * arr.shape[0]
+    num_ex = (1 - testing_pct) * train_y.shape[0]
     return int(num_ex / batch_size) + 1
 
 
@@ -139,7 +178,7 @@ def cnn_model_fn(features, labels, mode):
             eval_metric_ops=eval_metric_ops)
 
 
-def main(lot_name, testing_pct, batch_size, num_steps):
+def main(lot_name, testing_pct, batch_size):
     """Load train and test sets, create Estimator, set up logging hooks, and
     train and evaluate the Estimator.
 
@@ -147,19 +186,23 @@ def main(lot_name, testing_pct, batch_size, num_steps):
         lot_name: {"primis", "secondus", "solum"}.
         testing_pct: (0, 1).
         batch_size: Preferably powers of 2.
-        num_steps: Depending on the batch_size, is set to the minimum number of
-        steps required to train the model on each training example once.
     Returns:
         Prints and saves logs, and saves model checkpoints.
     """
 
-    tmp = pickle.load(tmp, "../data/split_" + lot_name + ".npy")
+    tmp = pickle_load("/data/" + "split_" + lot_name + ".npy")
     train_X, test_X, train_y, test_y = tmp[0], tmp[1], tmp[2], tmp[3]
+
+    # num_steps: Depending on the batch_size, is set to the minimum number of
+    # steps required to train the model on each training example once.
+    num_steps = find_num_steps(train_y,
+                               batch_size,
+                               testing_pct)
 
     # Create the Estimator
     classifier = tf.estimator.Estimator(
             model_fn=cnn_model_fn,
-            model_dir="logs/" + lot_name + "_" +
+            model_dir="/output/" + lot_name + "_" +
             time.strftime("%d-%m") + "_" + time.strftime("%H-%M"))
 
     # Set up logging for predictions.
@@ -177,7 +220,7 @@ def main(lot_name, testing_pct, batch_size, num_steps):
             shuffle=False)
     classifier.train(
             input_fn=train_input_fn,
-            steps=num_steps,
+            steps=10000,
             hooks=[logging_hook])
 
     # Evaluate the model and print results.
@@ -204,11 +247,6 @@ if __name__ == "__main__":
     dropout_rate = args.dropout
     learning_rate = args.learning
 
-    main(
-            args.name,
-            args.testingpct,
-            args.batchsize,
-            find_num_steps(
-                    args.name,
-                    args.batchsize,
-                    args.testingpct))
+    main(args.name,
+         args.testingpct,
+         args.batchsize)
