@@ -9,3 +9,4 @@ retrieval/__pycache__/
 .Rhistory
 .gitignore.swp
 .floydexpt
+.floyddata
