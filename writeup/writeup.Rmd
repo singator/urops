@@ -68,7 +68,7 @@ grid::grid.raster(img)
 ```
 
 We created a CNN for each of these parking lots, and achieved prediction
-accuracies of 99.8+%, which translated to the misclassification of about 300 spots
+accuracies of 99.8+%, which translated to the misclassification of about 250 spots
 in requesting for the prediction of the state of about 175,000. It is therefore
 without question that CNNs are apt tools for this task. It will be fruitful to
 understand how this success can be replicated in the local context, where we
