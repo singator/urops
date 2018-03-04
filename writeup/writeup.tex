@@ -26,7 +26,7 @@
 \PassOptionsToPackage{usenames,dvipsnames}{color} % color is loaded by hyperref
 \hypersetup{unicode=true,
             pdftitle={Alleviating Parking Woes Through ML},
-            pdfauthor={Achal Rayakar, Vik Gopal},
+            pdfauthor={Vik Gopal, Achal Rayakar},
             colorlinks=true,
             linkcolor=Maroon,
             citecolor=Blue,
@@ -80,7 +80,7 @@
   \title{\textbf{Alleviating Parking Woes Through ML}}
   \pretitle{\vspace{\droptitle}\centering\huge}
   \posttitle{\par}
-  \author{Achal Rayakar, Vik Gopal}
+  \author{Vik Gopal, Achal Rayakar}
   \preauthor{\centering\large\emph}
   \postauthor{\par}
   \date{}
@@ -111,9 +111,9 @@ The initial task of this project was to train a convolutional neural network
 (CNN) to classify images of parking spots\footnote{In this document, an
 individual parking space is referred to as a parking \emph{spot}, and spots
 constitute a parking \emph{lot}.} from publicly available datasets.  Having
-done so, the next part is to apply the techniques we learn, to data gathered
-within NUS. The purpose of this write-up is to detail the measures we shall
-implement in order to protect the data that is gathered from within NUS.
+done so, the next part is to apply the techniques we learn to data gathered
+within NUS. The purpose of this write-up is to detail this application, with a
+focus on how we will protect data gathered within NUS.
 
 The rest of this document is organised as follows: In section
 \ref{project-goals}, we summarise the goals of the project. In section
@@ -144,7 +144,7 @@ Picture deleted, and user sent spatially-accurate abstraction of spot-wise
 occupancy status.
 \end{center}
 
-In addition, the emphasis is on utilising AI, based on low-cost images of
+The emphasis is on utilising AI, based on low-cost images of
 parking spots, rather than an expensive implementation of sensors at every
 parking spot.
 
@@ -199,7 +199,7 @@ datasets.
 %\begin{center}\includegraphics{writeup_files/figure-latex/unnamed-chunk-1-1} \end{center}
 We created a CNN for each of these parking lots, and achieved prediction
 accuracies of 99.8+\%, which translated to the misclassification of
-about 300 spots in requesting for the prediction of the state of about
+about 260 spots in requesting for the prediction of the state of about
 175,000. It is therefore without question that CNNs are apt tools for
 this task. It will be fruitful to understand how this success can be
 replicated in the local context, where we have control over collection
@@ -305,7 +305,7 @@ images will stay there until this project culminates, likely in August 2018.
 There are a number of reasons for these choices:
 
 \begin{enumerate}
-  \item The python machine learning package that we use, TensorFlow, is set up
+  \item The Python machine learning library that we use, TensorFlow, is set up
 and updated automatically for us on FLoydhub along with all dependency modules.
   \item Great computing power is available on the cloud inexpensively; it will
   save us many hours in training.
@@ -349,16 +349,12 @@ several extensions that we could consider:
 \begin{enumerate}
 \tightlist
 \item How well can we classify the lots using grayscale images, which is
-typically what we obtain from CC-tv cameras?
+typically what we obtain from CCTV cameras?
 \item How well can we classify lots at night?
 \item How can we overcome occlusion due to trees or neighbouring large cars?
 \item How well can the model perform this task indoors? How extensive a network
-or cameras would be needed in such a case?
+of cameras would be needed in such a case?
 \end{enumerate}
-
-%\newline
-%{\it How would you like me to name-drop OSHE's bus request here? Will need you
-%to talk about them earlier first.}
 
 \bibliographystyle{plain}
 \bibliography{ref}
