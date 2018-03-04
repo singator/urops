@@ -3,14 +3,6 @@
 Inspired by (only inspired -- the tutorial, directly applied to our problem, 
 produced horrible results):
     https://www.tensorflow.org/tutorials/layers
-Has the same architecture as iteration-duo.
-
-Current best evaluation accuracies (4 s.f.):
-    primis: 99.78%
-    secondus: 99.52%
-    solum: 99.87%
-All of the above are better than iteration-duo.
-The splits that resulted in the above are on Floydhub and Google Drive.
 """
 
 from __future__ import absolute_import
