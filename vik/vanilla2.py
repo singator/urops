@@ -12,16 +12,16 @@ from sklearn.model_selection import train_test_split
 tf.logging.set_verbosity(tf.logging.INFO)
 parser = argparse.ArgumentParser()
 
-def train_input_fn(features, labels, batch_size):
+def train_input_fn(features, labels):
     """An input function for training"""
     # Convert the inputs to a Dataset.
-    dataset = tf.data.Dataset.from_tensor_slices(({"pixels": features}, labels))
+    dataset = tf.data.Dataset.from_tensor_slices(({'x':features}, labels))
 
     # Shuffle, repeat, and batch the examples.
-    dataset = dataset.shuffle(100).repeat().batch(batch_size)
+    # dataset = dataset.shuffle(100).repeat().batch(batch_size)
 
     # Return the dataset.
-    return dataset
+    return dataset.batch(2)
 
 def main(argv):
   args = parser.parse_args(argv[1:])
@@ -50,16 +50,17 @@ def main(argv):
 #      'test set is "occupied"')
 
 # Try:
+  x1 = tf.feature_column.numeric_column(key='x')
   classifier = tf.estimator.DNNClassifier(
-      feature_columns=[tf.feature_column.numeric_column(key="pixels")],
+      feature_columns=[x1],
       # Two hidden layers of 10 nodes each.
-      hidden_units=[2, 2],
+      hidden_units=[3, 3],
       # The model must choose between 3 classes.
       n_classes=2,
       model_dir=".")
 
   classifier.train(
-      input_fn=lambda:train_input_fn(test_X, test_Y, 10), steps=5)
+      input_fn=lambda:train_input_fn(pX, pY), steps=1)
 
 # Our application logic will be added here
 
