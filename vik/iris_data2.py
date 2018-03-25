@@ -27,19 +27,27 @@ def load_data(y_name='Species'):
     return (train_x, train_y), (test_x, test_y)
 
 
-def train_input_fn(features, labels, batch_size):
+def train_input_fn(features, labels):
     """An input function for training"""
     # Convert the inputs to a Dataset.
     dataset = tf.data.Dataset.from_tensor_slices((dict(features), labels))
 
+    """
+    The following combination returns a tuple of length 120, with a dict for 
+    trainX and array for trainY:
+    dataset = dataset.shuffle(1000).repeat().batch(120)
+    return dataset.make_one_shot_iterator().get_next()
+  
+    The following combination returns an error that I cannot solve:
+    dataset = dataset.shuffle(1000).repeat().batch(120)
+    return dataset
+    """
     # Shuffle, repeat, and batch the examples.
     # dataset = dataset.shuffle(1000).repeat().batch(batch_size)
-    dataset = dataset.shuffle(1000)
-
-    # Return the read end of the pipeline.
-    # return dataset.make_one_shot_iterator().get_next()
-    return dataset
-
+    # dataset = dataset.shuffle(120).repeat()
+    #dataset = dataset.shuffle(1000).repeat().batch(100)
+    dataset = dataset.repeat().batch(10)
+    return dataset.make_one_shot_iterator().get_next()
 
 def eval_input_fn(features, labels, batch_size):
     """An input function for evaluation or prediction"""
@@ -55,10 +63,10 @@ def eval_input_fn(features, labels, batch_size):
 
     # Batch the examples
     assert batch_size is not None, "batch_size must not be None"
-    dataset = dataset.batch(batch_size)
+    dataset = dataset.batch(30)
 
     # Return the read end of the pipeline.
-    return dataset.make_one_shot_iterator().get_next()
+    return dataset
 
 
 # The remainder of this file contains a simple example of a csv parser,

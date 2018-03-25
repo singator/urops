@@ -22,8 +22,23 @@ if __name__ == "__main__":
   # poor.
   tf.reset_default_graph()
 
-  dataset1 = tf.data.Dataset.from_tensor_slices(tf.random_uniform([4, 10]))
+#  dataset1 = tf.data.Dataset.from_tensor_slices(tf.random_uniform([4, 10]))
+#  it2 = dataset1.make_initializable_iterator()
+#  nn = it2.get_next()
+#
+#  with tf.Session() as sess:
+#    print(dataset1.output_types)  # ==> "tf.float32"
+#    print(dataset1.output_shapes)  # ==> "(10,)"
+#
+#    sess.run(it2.initializer)
+#    vv = sess.run(nn)
+#    print(vv)
+
+  dataset1 = tf.data.Dataset.range(10)
+  it2 = dataset1.make_one_shot_iterator()
+  nn = it2.get_next()
 
   with tf.Session() as sess:
-    print(dataset1.output_types)  # ==> "tf.float32"
-    print(dataset1.output_shapes)  # ==> "(10,)"
+    vv = sess.run(nn)
+    vv = sess.run(nn)
+    print(vv)
