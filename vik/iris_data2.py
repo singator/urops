@@ -46,7 +46,7 @@ def train_input_fn(features, labels):
     # dataset = dataset.shuffle(1000).repeat().batch(batch_size)
     # dataset = dataset.shuffle(120).repeat()
     #dataset = dataset.shuffle(1000).repeat().batch(100)
-    dataset = dataset.repeat().batch(10)
+    dataset = dataset.shuffle(200).batch(10).repeat()
     return dataset.make_one_shot_iterator().get_next()
 
 def eval_input_fn(features, labels, batch_size):
