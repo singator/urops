@@ -3,6 +3,9 @@
 Inspired by (only inspired -- the tutorial, directly applied to our problem, 
 produced horrible results):
     https://www.tensorflow.org/tutorials/layers
+    
+Currently, the minimum testing accuracy of this algorithm is 99.8% on primis;
+secondus and solum are at 99.9%.
 """
 
 from __future__ import absolute_import
