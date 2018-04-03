@@ -2,9 +2,13 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
+global x
+
 if __name__ == '__main__':
   tf.logging.set_verbosity(tf.logging.INFO)
   tf.reset_default_graph()
+  x = 10.0
+  print(x)
 
   a = tf.constant(3.0, dtype=tf.float32, name ='a')
   b = tf.constant(4.0, name='b') # also tf.float32 implicitly
