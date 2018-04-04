@@ -8,7 +8,9 @@ import pickle, os, time
 from datetime import datetime
 from sklearn.model_selection import StratifiedShuffleSplit
 
-global dropout_rate, learning_rate
+# 0.25 and 0.0001 work
+dropout_rate=0.25
+learning_rate = 0.0005
 
 def cnn_model_fn(features, labels, mode):
     """cnn_model_fn creates an Estimator from the inputs.
@@ -25,6 +27,8 @@ def cnn_model_fn(features, labels, mode):
         An Estimator in the image of TensorFlow's Estimator API, which contains
         the predictions, loss, and a training operation.
     """
+
+    global dropout_rate, learning_rate
 
     # First convolutional+pooling layer.
     conv1 = tf.layers.conv2d(
@@ -82,19 +86,15 @@ def cnn_model_fn(features, labels, mode):
     # Logging Hooks
     tensors_to_log = {'loss': loss, 'step': tf.train.get_global_step()}
     logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, 
-       every_n_iter=10)
+       every_n_iter=5)
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.train.GradientDescentOptimizer(
-                learning_rate=learning_rate)
-        train_op = optimizer.minimize(
-                loss=loss,
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        train_op = optimizer.minimize(loss=loss,
                 global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(
-                mode=mode,
-                loss=loss,
-                train_op=train_op, 
+                mode=mode, loss=loss, train_op=train_op, 
                 training_hooks=[logging_hook])
 
     # Add evaluation metrics (for EVAL mode)
@@ -108,10 +108,7 @@ def cnn_model_fn(features, labels, mode):
             eval_metric_ops=eval_metric_ops)
 
 if __name__ == '__main__':
-
     tf.logging.set_verbosity(tf.logging.INFO)
-    dropout_rate=0.25
-    learning_rate = 0.0001
 
     # Read in the pX and pY data.
     # In total there are 105843 examples.
@@ -143,15 +140,13 @@ if __name__ == '__main__':
       test_x = test_x[te_id]
       test_y = test_y[te_id]
 
-    # train_x = pX[0:100]
-    # train_y = pY[0:100]
-
     # reset graph first
     tf.reset_default_graph()
 
     # Construct estimator first
     now = datetime.now()
-    logdir = "tf_logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    logdir = "../tf_logs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+    #logdir = "output/" + now.strftime("%Y%m%d-%H%M%S") + "/"
 
     classifier = tf.estimator.Estimator(model_fn=cnn_model_fn,
             model_dir=logdir)
@@ -162,11 +157,19 @@ if __name__ == '__main__':
     # tensors_to_log = {'classes': 'test'}
     # logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=3)
 
-    # Train the model.
-    train_input_fn = tf.estimator.inputs.numpy_input_fn(
-            x={"x": train_x}, y=train_y, batch_size=10,
-            num_epochs=None, shuffle=False)
+    for _ in np.arange(2):
+      # Train the model.
+      train_input_fn = tf.estimator.inputs.numpy_input_fn(x={"x": train_x}, 
+          y=train_y, batch_size=32, num_epochs=None, shuffle=True)
 
-    # Train 20 steps
-    #classifier.train(input_fn=train_input_fn, steps=4, hooks=[logging_hook])
-    classifier.train(input_fn=train_input_fn, steps=100)
+      # Train the model. Each step is a call to the train_input_fn()
+      #classifier.train(input_fn=train_input_fn, steps=4, hooks=[logging_hook])
+      classifier.train(input_fn=train_input_fn, steps=10)
+
+      # Evaluate the model and print results.
+      eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+	      x={"x": val_x}, y=val_y, num_epochs=None, batch_size=32,
+	      shuffle=False)
+      eval_results = classifier.evaluate(input_fn=eval_input_fn, steps=1)
+
+      print('Accuracy on validation set is {0:.3f}'.format(eval_results['accuracy']))
