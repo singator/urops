@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 from torch.autograd import Variable
-
+import matplotlib.pyplot as plt
 
 CSV_COLUMN_NAMES = ['SepalLength', 'SepalWidth', 'PetalLength', 'PetalWidth', 'Species']
 SPECIES = ['Sentosa', 'Versicolor', 'Virginica']
@@ -13,10 +13,10 @@ SPECIES = ['Sentosa', 'Versicolor', 'Virginica']
 input_size = 4
 hidden_size = 10
 num_classes = 3
-num_epochs = 500
+num_epochs = 600
 training_bs = 60
 test_bs = 15
-learning_rate = 0.03
+learning_rate = 0.05
 eval_every = 25
 
 class IrisDataset(Dataset):
@@ -79,6 +79,8 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate)
     global_step = 0
+    loss_plt = []
+    acc_eval_plt = []
 
     for epoch in range(num_epochs):
         for i,xy in enumerate(train_torch_loader):
@@ -93,8 +95,9 @@ if __name__ == '__main__':
             optimizer.step()
             global_step += 1
         
-        print('Epoch {}, step {} completed. Loss: {:.3f}'.format(epoch+1, 
-          global_step, loss.data[0]))
+        loss_plt.append(loss.data[0])
+        #print('Epoch {}, step {} completed. Loss: {:.3f}'.format(epoch+1, 
+        #  global_step, loss.data[0]))
 
         # Evaluate on VALIDATION set:
         if (epoch + 1) % eval_every == 0:
@@ -107,4 +110,21 @@ if __name__ == '__main__':
             _,predicted = torch.max(outputs.data, 1)
             correct = (predicted == y).sum()
             accuracy = correct / total
-            print('Accuracy on val set: {:.2f}'.format(accuracy))
+            acc_eval_plt.append(accuracy)
+            # print('Accuracy on val set: {:.2f}'.format(accuracy))
+
+    # Plot Loss and Accuracy
+    plt.figure(1, figsize=(9,4.5))
+    x_val = np.arange(num_epochs) + 1
+    plt.subplot(121)
+    plt.plot(x_val, loss_plt, color='b')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training Loss')
+    x_val = np.arange(eval_every, num_epochs+1, eval_every)
+    plt.subplot(122)
+    plt.plot(x_val, acc_eval_plt, color='r')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Test Set Accuracy')
+    plt.show()
