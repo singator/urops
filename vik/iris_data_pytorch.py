@@ -9,6 +9,15 @@ from torch.autograd import Variable
 CSV_COLUMN_NAMES = ['SepalLength', 'SepalWidth', 'PetalLength', 'PetalWidth', 'Species']
 SPECIES = ['Sentosa', 'Versicolor', 'Virginica']
 
+# Hyperparameters:
+input_size = 4
+hidden_size = 10
+num_classes = 3
+num_epochs = 500
+training_bs = 60
+test_bs = 15
+learning_rate = 0.03
+eval_every = 25
 
 class IrisDataset(Dataset):
     """ Iris Dataset """
@@ -30,7 +39,7 @@ class IrisDataset(Dataset):
         sample = self.data.iloc[idx]
         samp_mat = sample.as_matrix().reshape(-1, 5)
         x = torch.Tensor(samp_mat[:, :-1])
-        y = samp_mat[:, -1]
+        y = torch.LongTensor(samp_mat[:, -1])
         sample_dict = {'x': x, 'y':y}
 #        sample_dict = {'batch': sample.values}
         return sample_dict
@@ -57,33 +66,45 @@ if __name__ == '__main__':
 
     # Create data loaders for training and test sets.
     train_torch_dataset = IrisDataset(train_pd)
-    train_torch_loader = DataLoader(train_torch_dataset, batch_size=8, 
+    train_torch_loader = DataLoader(train_torch_dataset, batch_size=training_bs, 
             shuffle=True, num_workers=2)
 
     test_torch_dataset = IrisDataset(test_pd)
-    test_torch_loader = DataLoader(test_torch_dataset, batch_size=1,
+    test_torch_loader = DataLoader(test_torch_dataset, batch_size=test_bs,
             shuffle=True, num_workers=2)
 
-    # print(test_torch_dataset[0:4])
-    # Test loader
-    # for x in test_torch_loader: 
-    #    print(x)
-   
-    net = Net(4, 10, 2)
+    net = Net(input_size, hidden_size, num_classes)
     
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(net.parameters(), lr=0.0001)
+    optimizer = torch.optim.SGD(net.parameters(), lr=learning_rate)
+    global_step = 0
 
-    for i,xy in enumerate(train_torch_loader):
-        x = Variable(xy['x'].view(-1, 4))
-        y = Variable(xy['y'])
+    for epoch in range(num_epochs):
+        for i,xy in enumerate(train_torch_loader):
+            x = Variable(xy['x']).view(-1, 4)
+            y = Variable(xy['y']).view(-1)
 
-        # Forward + Backward + Optimise
-        optimizer.zero_grad()
-        outputs = net(x)
-        loss = criterion(outputs, y)
-        loss.backward()
-        optimizer.step()
-        print(loss.data)
+            # Forward + Backward + Optimise
+            optimizer.zero_grad()
+            outputs = net(x)
+            loss = criterion(outputs, y)
+            loss.backward()
+            optimizer.step()
+            global_step += 1
+        
+        print('Epoch {}, step {} completed. Loss: {:.3f}'.format(epoch+1, 
+          global_step, loss.data[0]))
 
+        # Evaluate on VALIDATION set:
+        if (epoch + 1) % eval_every == 0:
+            total = test_bs
+
+            xy = next(iter(test_torch_loader))
+            x = Variable(xy['x']).view(-1, 4)
+            y = xy['y'].view(-1)
+            outputs = net(x)
+            _,predicted = torch.max(outputs.data, 1)
+            correct = (predicted == y).sum()
+            accuracy = correct / total
+            print('Accuracy on val set: {:.2f}'.format(accuracy))
