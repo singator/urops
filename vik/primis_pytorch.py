@@ -15,11 +15,16 @@ import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torch.autograd import Variable
 
 # Hyperparameters and such:
-in_fname = '../data/primis_small.npy'
+in_fname = '../data/primis_big.npy'
+num_epochs = 1
+num_steps = 50
+learning_rate = 0.001
+bs_test_val = 32
 
 class pkDataset(Dataset):
     """ Parking Lot Dataset Constructor"""
@@ -56,6 +61,25 @@ class pkDataset(Dataset):
         return {'x': torch.FloatTensor(x_sample),
                 'y': torch.LongTensor(y_sample)}
 
+class Net(nn.Module):
+    """ First attempt at CNN on primis """
+    
+    def __init__(self):
+        super(Net, self).__init__()
+
+        self.conv1 = nn.Conv2d(3, 32, 5)
+        self.conv2 = nn.Conv2d(32, 64, 3)
+        self.fc1 = nn.Linear(2304, 512)
+        self.fc2 = nn.Linear(512, 2)
+
+    def forward(self, x):
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(F.max_pool2d(self.conv2(x), 2))
+        x = x.view(-1, 2304)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
 if __name__ == '__main__':
 
     with open(in_fname, 'rb') as f:
@@ -85,30 +109,49 @@ if __name__ == '__main__':
 
     # Create datasets and their loaders
     train_data = pkDataset([train_x, train_y], True)
-    train_loader = DataLoader(train_data, batch_size=10,
+    train_loader = DataLoader(train_data, batch_size=128,
             shuffle=True, num_workers=2)
 
     val_data = pkDataset([val_x, val_y], True)
-    val_loader = DataLoader(val_data, batch_size=10,
+    val_loader = DataLoader(val_data, batch_size=bs_test_val,
             shuffle=False, num_workers=2)
 
     test_data = pkDataset([test_x, test_y], True)
-    test_loader = DataLoader(test_data, batch_size=10,
+    test_loader = DataLoader(test_data, batch_size=bs_test_val,
             shuffle=False, num_workers=2)
 
-    nnet = nn.Sequential(
-            nn.Conv2d(3, 32, 5),
-            nn.ReLU(),
-            )
+    model = Net()
 
-    for i, xy in enumerate(test_loader):
+    # Loss and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    # for epoch in range(num_epochs):
+    for i,xy in enumerate(train_loader):
         x = Variable(xy['x']).view(-1, 3, 32, 32)
-        outputs=nnet(x)
+        y = Variable(xy['y']).view(-1)
 
-    print(outputs.data)
+        # Forward + Backward + Optimise
+        optimizer.zero_grad()
+        outputs = model(x)
+        loss = criterion(outputs, y)
+        loss.backward()
+        optimizer.step()
+        print('{}) Loss: {:.3f}'.format(i, loss.data[0]))
 
-#    all_data_loader = DataLoader(all_data, batch_size = 16,
-#            shuffle = True, num_workers=4)
-#
-#    ii = iter(all_data_loader)
-#    print(next(ii))
+        if i > num_steps:
+            break
+        
+#    if (epoch + 1) % eval_every == 0:
+#        total = test_bs
+
+    xy = next(iter(test_loader))
+    x = Variable(xy['x']).view(-1, 3, 32, 32)
+    y = xy['y'].view(-1)
+
+    outputs = model(x)
+    _,predicted = torch.max(outputs.data, 1)
+    print(predicted)
+    correct = (predicted == y).sum()
+    accuracy = correct / bs_test_val
+    print('Accuracy on val set: {:.2f}'.format(accuracy))
