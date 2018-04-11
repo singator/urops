@@ -8,6 +8,9 @@ Running the primis dataset using pytorch on a CPU.
 - normalise? (ok for now).
 - work with smaller dataset
 - set up CNN model
+- try decaying learning rate, different optimizer
+- run on FH using:
+floyd run --gpu+ --env pytorch-0.3 --data urops/datasets/primis_npy:/data 'python primis_pytorch_fh_gpu.py'
 """
 
 import pickle
@@ -20,11 +23,13 @@ from torch.utils.data import Dataset, DataLoader
 from torch.autograd import Variable
 
 # Hyperparameters and such:
-in_fname = '../data/primis_small.npy'
-num_epochs = 1
-num_steps = 50
-learning_rate = 0.001
-bs_test_val = 5
+in_fname = '/data/primis_big.npy'
+num_epochs = 50
+num_steps = 100
+learning_rate = 1e-6  # 0.001 seemed to work ok.
+bs_test_val = 64
+bs_training = 128
+eval_every = 10
 
 class pkDataset(Dataset):
     """ Parking Lot Dataset Constructor"""
@@ -103,67 +108,64 @@ if __name__ == '__main__':
       test_x = test_x[te_id]
       test_y = test_y[te_id]
 
-    print('Dataset sizes for train, validation and test' + 
-            ' sets are {}, {} and {}.'.format(len(train_x), len(val_x), 
-                len(test_x)))
+#    print('Dataset sizes for train, validation and test' + 
+#            ' sets are {}, {} and {}.'.format(len(train_x), len(val_x), 
+#                len(test_x)))
+    print('-----')
+    print('Running on GPU!')
+    print('-----')
 
     # Create datasets and their loaders
     train_data = pkDataset([train_x, train_y], True)
-    train_loader = DataLoader(train_data, batch_size=25,
+    train_loader = DataLoader(train_data, batch_size=bs_training,
             shuffle=True, num_workers=2)
 
     val_data = pkDataset([val_x, val_y], True)
     val_loader = DataLoader(val_data, batch_size=bs_test_val,
-            shuffle=True, num_workers=2)
-    tmp_iter = iter(val_loader)
+            shuffle=False, num_workers=2)
+    val_iter = iter(val_loader)
 
     test_data = pkDataset([test_x, test_y], True)
     test_loader = DataLoader(test_data, batch_size=bs_test_val,
             shuffle=False, num_workers=2)
 
     model = Net()
+    model.cuda()
+    print('Model instantiated')
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    global_step = 0
 
-    # for epoch in range(num_epochs):
-    for i,xy in enumerate(train_loader):
-        x = Variable(xy['x']).view(-1, 3, 32, 32)
-        y = Variable(xy['y']).view(-1)
+    for epoch in range(num_epochs):
+        for i,xy in enumerate(train_loader):
+            x = Variable(xy['x'].cuda()).view(-1, 3, 32, 32)
+            y = Variable(xy['y'].cuda()).view(-1)
 
-        # Forward + Backward + Optimise
-        optimizer.zero_grad()
-        outputs = model(x)
-        loss = criterion(outputs, y)
-        loss.backward()
-        optimizer.step()
-        print('{}) Loss: {:.3f}'.format(i, loss.data[0]))
-
-        if i > num_steps:
-            break
+            # Forward + Backward + Optimise
+            optimizer.zero_grad()
+            outputs = model(x)
+            loss = criterion(outputs, y)
+            loss.backward()
+            optimizer.step()
+            global_step += 1
+            print('{{ "metric": "Training Loss", "value": {:.3f} }}'.format(loss.data[0]))
         
-#    if (epoch + 1) % eval_every == 0:
-#        total = test_bs
+        if (epoch + 1) % eval_every == 0:
+            try:
+                xy = next(val_iter)
+            except StopIteration:
+                val_iter = iter(val_loader)
+                xy = next(val_iter)
 
+            x = Variable(xy['x'].cuda(), volatile=True).view(-1, 3, 32, 32)
+            y = xy['y'].cuda().view(-1)
 
-    for ii in np.arange(100):
-        try:
-            xy = next(tmp_iter)
-            print(xy['y'])
-        except StopIteration:
-            tmp_iter = iter(val_loader)
-            xy = next(tmp_iter)
-            print(xy['y'])
+            outputs = model(x)
+            _,predicted = torch.max(outputs.data, 1)
 
-#    xy = next(iter(test_loader))
-#    x = Variable(xy['x']).view(-1, 3, 32, 32)
-#    y = xy['y'].view(-1)
-#    print(y)
-#
-#    outputs = model(x)
-#    _,predicted = torch.max(outputs.data, 1)
-#    # print(predicted)
-#    correct = (predicted == y).sum()
-#    accuracy = correct / bs_test_val
-#    print('Accuracy on val set: {:.2f}'.format(accuracy))
+            # print(predicted)
+            correct = (predicted == y).sum()
+            accuracy = correct / bs_test_val
+            print('{{"metric": "Validation Accuracy", "value": {:.3f} }}'.format(accuracy))
