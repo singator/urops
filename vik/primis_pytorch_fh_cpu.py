@@ -8,6 +8,9 @@ Running the primis dataset using pytorch on a CPU.
 - normalise? (ok for now).
 - work with smaller dataset
 - set up CNN model
+- try decaying learning rate, different optimizer
+- run on FH using:
+floyd run --env pytorch-0.3 --data urops/datasets/primis_npy:/data 'python primis_pytorch_fh_cpu.py'
 """
 
 import pickle
@@ -20,11 +23,13 @@ from torch.utils.data import Dataset, DataLoader
 from torch.autograd import Variable
 
 # Hyperparameters and such:
-in_fname = '/data/primis_big.npy'
-num_epochs = 1
-num_steps = 10
-learning_rate = 0.001
-bs_test_val = 32
+in_fname = '../data/primis_big.npy'
+num_epochs = 100
+num_steps = 50
+learning_rate = 1e-5
+bs_test_val = 256
+bs_training = 256
+eval_every = 10
 
 class pkDataset(Dataset):
     """ Parking Lot Dataset Constructor"""
@@ -109,7 +114,7 @@ if __name__ == '__main__':
 
     # Create datasets and their loaders
     train_data = pkDataset([train_x, train_y], True)
-    train_loader = DataLoader(train_data, batch_size=128,
+    train_loader = DataLoader(train_data, batch_size=bs_training,
             shuffle=True, num_workers=2)
 
     val_data = pkDataset([val_x, val_y], True)
@@ -124,34 +129,56 @@ if __name__ == '__main__':
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) 
+    global_step = 0
 
-    # for epoch in range(num_epochs):
-    for i,xy in enumerate(train_loader):
-        x = Variable(xy['x']).view(-1, 3, 32, 32)
-        y = Variable(xy['y']).view(-1)
+    for epoch in range(num_epochs):
+        for i,xy in enumerate(train_loader):
+            x = Variable(xy['x']).view(-1, 3, 32, 32)
+            y = Variable(xy['y']).view(-1)
 
-        # Forward + Backward + Optimise
-        optimizer.zero_grad()
-        outputs = model(x)
-        loss = criterion(outputs, y)
-        loss.backward()
-        optimizer.step()
-        print('{}) Loss: {:.3f}'.format(i, loss.data[0]))
+            # Forward + Backward + Optimise
+            optimizer.zero_grad()
+            outputs = model(x)
+            loss = criterion(outputs, y)
+            loss.backward()
+            optimizer.step()
+            global_step += 1
+            print('{{ "metric": "Training Loss", "value": {:.3f} }}'.format(loss.data[0]))
 
-        if i > num_steps:
-            break
+            if i > num_steps:
+                break
         
-#    if (epoch + 1) % eval_every == 0:
-#        total = test_bs
+        print('Training epoch {} completed.'.format(epoch))
+            
+        if (epoch + 1) % eval_every == 0:
+            total = len(val_x)
 
-    xy = next(iter(test_loader))
-    x = Variable(xy['x']).view(-1, 3, 32, 32)
-    y = xy['y'].view(-1)
+            correct = 0
+            for i,xy in enumerate(val_loader):
+                x = Variable(xy['x'], volatile=True).view(-1, 3, 32, 32)
+                y = xy['y'].view(-1)
 
-    outputs = model(x)
-    _,predicted = torch.max(outputs.data, 1)
-    print(predicted)
-    correct = (predicted == y).sum()
-    accuracy = correct / bs_test_val
-    print('Accuracy on val set: {:.2f}'.format(accuracy))
+                outputs = model(x)
+                _,predicted = torch.max(outputs.data, 1)
+
+                correct += (predicted == y).sum()
+
+            accuracy = correct / total
+            print('{{"metric": "Validation Accuracy", "value": {:.3f} }}'.format(accuracy))
+
+    # Compute test set accuracy:
+    total = len(test_x)
+
+    correct = 0
+    for i,xy in enumerate(test_loader):
+        x = Variable(xy['x'], volatile=True).view(-1, 3, 32, 32)
+        y = xy['y'].view(-1)
+
+        outputs = model(x)
+        _,predicted = torch.max(outputs.data, 1)
+
+        correct += (predicted == y).sum()
+
+    accuracy = correct / total
+    print('{{"metric": "Test Set Accuracy", "value": {:.3f} }}'.format(accuracy))
