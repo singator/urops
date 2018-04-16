@@ -18,4 +18,4 @@ TODO List
   max. utilisation.
 - [ ] Visualise the accuracies, and saturation on matplotlib
 - [ ] Visualise the CN layer outputs, and the ones with errors on the test set.
-- [ ] Practice with output on FH
+- [X] Practice with output on FH
