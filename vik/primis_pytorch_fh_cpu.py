@@ -23,7 +23,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.autograd import Variable
 
 # Hyperparameters and such:
-in_fname = '../data/primis_big.npy'
+in_fname = '/data/primis_big.npy'
 num_epochs = 100
 num_steps = 50
 learning_rate = 1e-5
@@ -127,12 +127,17 @@ if __name__ == '__main__':
 
     model = Net()
 
-    # Loss and optimizer
+    # Loss and optimizer, with decaying learning rate
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) 
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
     global_step = 0
+    tr_loss = []
+    val_acc = []
 
     for epoch in range(num_epochs):
+        scheduler.step()
+
         for i,xy in enumerate(train_loader):
             x = Variable(xy['x']).view(-1, 3, 32, 32)
             y = Variable(xy['y']).view(-1)
@@ -145,9 +150,10 @@ if __name__ == '__main__':
             optimizer.step()
             global_step += 1
             print('{{ "metric": "Training Loss", "value": {:.3f} }}'.format(loss.data[0]))
+            tr_loss.append([global_step, loss.data[0]])
 
-            if i > num_steps:
-                break
+#            if i > num_steps:
+#                break
         
         print('Training epoch {} completed.'.format(epoch))
             
@@ -166,6 +172,7 @@ if __name__ == '__main__':
 
             accuracy = correct / total
             print('{{"metric": "Validation Accuracy", "value": {:.3f} }}'.format(accuracy))
+            val_acc.append([global_step, accuracy])
 
     # Compute test set accuracy:
     total = len(test_x)
@@ -182,3 +189,7 @@ if __name__ == '__main__':
 
     accuracy = correct / total
     print('{{"metric": "Test Set Accuracy", "value": {:.3f} }}'.format(accuracy))
+    test_acc = accuracy
+
+    with open('/output/metrics.pickle', 'wb') as f:
+        pickle.dump([tr_loss, val_acc, test_acc], f)

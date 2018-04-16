@@ -24,11 +24,11 @@ from torch.autograd import Variable
 
 # Hyperparameters and such:
 in_fname = '/data/primis_big.npy'
-num_epochs = 50
-num_steps = 100
-learning_rate = 1e-6  # 0.001 seemed to work ok.
-bs_test_val = 64
-bs_training = 128
+num_epochs = 1
+num_steps = 50
+learning_rate = 1e-5
+bs_test_val = 256
+bs_training = 256
 eval_every = 10
 
 class pkDataset(Dataset):
@@ -108,9 +108,9 @@ if __name__ == '__main__':
       test_x = test_x[te_id]
       test_y = test_y[te_id]
 
-#    print('Dataset sizes for train, validation and test' + 
-#            ' sets are {}, {} and {}.'.format(len(train_x), len(val_x), 
-#                len(test_x)))
+    print('Dataset sizes for train, validation and test' + 
+            ' sets are {}, {} and {}.'.format(len(train_x), len(val_x), 
+                len(test_x)))
     print('-----')
     print('Running on GPU!')
     print('-----')
@@ -123,7 +123,6 @@ if __name__ == '__main__':
     val_data = pkDataset([val_x, val_y], True)
     val_loader = DataLoader(val_data, batch_size=bs_test_val,
             shuffle=False, num_workers=2)
-    val_iter = iter(val_loader)
 
     test_data = pkDataset([test_x, test_y], True)
     test_loader = DataLoader(test_data, batch_size=bs_test_val,
@@ -137,6 +136,8 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     global_step = 0
+    tr_loss = []
+    val_acc = []
 
     for epoch in range(num_epochs):
         for i,xy in enumerate(train_loader):
@@ -151,21 +152,46 @@ if __name__ == '__main__':
             optimizer.step()
             global_step += 1
             print('{{ "metric": "Training Loss", "value": {:.3f} }}'.format(loss.data[0]))
+            tr_loss.append([global_step, loss.data[0]])
+
+            if i > num_steps:
+                break
         
+        print('Training epoch {} completed.'.format(epoch))
+            
         if (epoch + 1) % eval_every == 0:
-            try:
-                xy = next(val_iter)
-            except StopIteration:
-                val_iter = iter(val_loader)
-                xy = next(val_iter)
+            total = len(val_x)
 
-            x = Variable(xy['x'].cuda(), volatile=True).view(-1, 3, 32, 32)
-            y = xy['y'].cuda().view(-1)
+            correct = 0
+            for i,xy in enumerate(val_loader):
+                x = Variable(xy['x'].cuda(), volatile=True).view(-1, 3, 32, 32)
+                y = xy['y'].cuda().view(-1)
 
-            outputs = model(x)
-            _,predicted = torch.max(outputs.data, 1)
+                outputs = model(x)
+                _,predicted = torch.max(outputs.data, 1)
 
-            # print(predicted)
-            correct = (predicted == y).sum()
-            accuracy = correct / bs_test_val
+                correct += (predicted == y).sum()
+
+            accuracy = correct / total
             print('{{"metric": "Validation Accuracy", "value": {:.3f} }}'.format(accuracy))
+            val_acc.append([global_step, accuracy])
+
+    # Compute test set accuracy:
+    total = len(test_x)
+
+    correct = 0
+    for i,xy in enumerate(test_loader):
+        x = Variable(xy['x'].cuda(), volatile=True).view(-1, 3, 32, 32)
+        y = xy['y'].cuda().view(-1)
+
+        outputs = model(x)
+        _,predicted = torch.max(outputs.data, 1)
+
+        correct += (predicted == y).sum()
+
+    accuracy = correct / total
+    print('{{"metric": "Test Set Accuracy", "value": {:.3f} }}'.format(accuracy))
+    test_acc = accuracy
+
+    with open('/output/metrics.pickle', 'wb') as f:
+        pickle.dump([tr_loss, val_acc, test_acc], f)
